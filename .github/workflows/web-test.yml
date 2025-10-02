@@ -2,9 +2,7 @@ name: Web Tests
 
 on:
   push:
-    branches:
-      - main
-      - issue-*
+    branches: [ main, issue-* ]
   pull_request:
   workflow_dispatch:
 
@@ -19,6 +17,6 @@ jobs:
           cache: "pnpm"
       - uses: pnpm/action-setup@v4
         with:
-          run_install: false
+          run_install: false         # sin 'version'
       - run: pnpm -C apps/web install --frozen-lockfile=false
       - run: pnpm -C apps/web test:run

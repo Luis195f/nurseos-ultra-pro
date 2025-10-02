@@ -2,9 +2,7 @@ name: CI Min
 
 on:
   push:
-    branches:
-      - main
-      - issue-*
+    branches: [ main, issue-* ]
   pull_request:
   workflow_dispatch:
 
@@ -20,7 +18,7 @@ jobs:
           cache: "pnpm"
       - uses: pnpm/action-setup@v4
         with:
-          run_install: false
+          run_install: false         # sin 'version'
       - run: pnpm -C apps/web install --frozen-lockfile=false
       - run: pnpm -C apps/web test:run
 
@@ -39,11 +37,7 @@ jobs:
           python - <<'PY'
           import importlib, sys
           sys.path.insert(0, ".")
-          mods = [
-            "apps", "apps.api", "apps.api.app",
-            "apps.api.app.models", "apps.api.app.schemas"
-          ]
-          for m in mods:
+          for m in ["apps","apps.api","apps.api.app","apps.api.app.models","apps.api.app.schemas"]:
               importlib.import_module(m)
           print("import-ok")
           PY
