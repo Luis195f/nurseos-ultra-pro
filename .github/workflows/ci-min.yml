@@ -2,7 +2,9 @@ name: CI Min
 
 on:
   push:
-    branches: [ main, issue-* ]
+    branches:
+      - main
+      - issue-*
   pull_request:
   workflow_dispatch:
 
@@ -18,7 +20,9 @@ jobs:
           cache: "pnpm"
       - uses: pnpm/action-setup@v4
         with:
-          run_install: false         # sin 'version'
+          version: 10.17.1
+          run_install: false
+          package_json_file: apps/web/package.json
       - run: pnpm -C apps/web install --frozen-lockfile=false
       - run: pnpm -C apps/web test:run
 
