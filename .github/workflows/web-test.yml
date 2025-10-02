@@ -1,0 +1,25 @@
+name: Web Tests
+
+on:
+  push:
+    branches: [ main, issue-* ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  vitest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: apps/web/package.json
+          standalone: true
+          run_install: false
+      - run: pnpm -v
+      - run: pnpm -C apps/web install --frozen-lockfile=false
+      - run: pnpm -C apps/web test:run
