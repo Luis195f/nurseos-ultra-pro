@@ -15,12 +15,14 @@
     "e2e:report": "playwright show-report"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.2",
     "idb-keyval": "^6.2.2",
     "oidc-client-ts": "^2.3.0",
     "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.9.3"
   },
   "devDependencies": {
