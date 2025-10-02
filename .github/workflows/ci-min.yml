@@ -1,8 +1,7 @@
 name: CI Min
 
 on:
-  push:
-    branches: [ main, issue-* ]
+  push: { branches: [ main, issue-* ] }
   pull_request:
   workflow_dispatch:
 
@@ -18,7 +17,6 @@ jobs:
           cache: pnpm
       - uses: pnpm/action-setup@v4
         with:
-          package_json_file: apps/web/package.json
           standalone: true
           run_install: false
       - run: pnpm -v
