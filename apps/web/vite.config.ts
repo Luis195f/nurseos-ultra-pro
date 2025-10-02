@@ -15,5 +15,6 @@ export default defineConfig({
     globals: true,                          // define `expect`, `vi`, etc. como globales
     setupFiles: './src/test/setup.ts',      // corre antes de los tests
     css: true,                              // permite importar CSS en pruebas si hace falta
+    exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
   },
 });
