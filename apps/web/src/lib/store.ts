@@ -1,44 +1,54 @@
 // apps/web/src/lib/store.ts
-export const STORE_KEYS = {
-  PATIENT_REGISTRY: "patient-registry",
-  CODE_BLUE: "code-blue",
-  DECEASED: "deceased"
-} as const;
+// Utilidad segura para almacenamiento (localStorage con fallback en memoria)
 
+type Json = any;
+const isBrowser = typeof window !== "undefined";
 
-export type StoreKey = (typeof STORE_KEYS)[keyof typeof STORE_KEYS];
+// Fallback en memoria (cuando no hay localStorage)
+const mem = new Map<string, string>();
 
-export function loadLS<T>(key: StoreKey, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
+export function getItem(key: string): string | null {
+  if (isBrowser && "localStorage" in window) {
+    try { return window.localStorage.getItem(key); } catch {}
   }
+  return mem.get(key) ?? null;
 }
 
-export function saveLS<T>(key: StoreKey, value: T) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* no-op */
+export function setItem(key: string, value: string) {
+  if (isBrowser && "localStorage" in window) {
+    try { window.localStorage.setItem(key, value); return; } catch {}
   }
+  mem.set(key, value);
 }
 
-export function appendLS<T>(key: StoreKey, item: T) {
-  const current = loadLS<T[]>(key, []);
-  current.push(item);
-  saveLS(key, current);
+export function removeItem(key: string) {
+  if (isBrowser && "localStorage" in window) {
+    try { window.localStorage.removeItem(key); return; } catch {}
+  }
+  mem.delete(key);
 }
 
-export function updateAtLS<T>(
-  key: StoreKey,
-  predicate: (x: T) => boolean,
-  updater: (x: T) => T
-) {
-  const current = loadLS<T[]>(key, []);
-  const next = current.map((x) => (predicate(x) ? updater(x) : x));
-  saveLS(key, next);
+// === API pedida por DeviceChips.tsx ===
+export function load<T = Json>(key: string, fallback?: T): T {
+  const raw = getItem(key);
+  if (raw == null) return fallback as T;
+  try { return JSON.parse(raw) as T; } catch { return (raw as unknown) as T; }
 }
+
+export function save<T = Json>(key: string, value: T): void {
+  const raw = typeof value === "string" ? value : JSON.stringify(value);
+  setItem(key, raw);
+}
+
+export function update<T = Json>(key: string, modifier:(prev: T | undefined)=>T) {
+  const prev = load<T | undefined>(key, undefined);
+  const next = modifier(prev);
+  save(key, next);
+  return next;
+}
+
+// Export por defecto opcional (no rompe imports existentes)
+export default { load, save, update, getItem, setItem, removeItem };
+
 
 
