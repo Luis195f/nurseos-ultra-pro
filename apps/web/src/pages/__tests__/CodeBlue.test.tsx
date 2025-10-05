@@ -9,10 +9,11 @@ describe("CodeBlue", () => {
     expect(screen.getByRole("heading", { name: /código azul pro/i })).toBeInTheDocument();
 
     // Botón Iniciar existe y es clickable
-    const start = screen.getByRole("button", { name: /iniciar/i });
+    const start = screen.getByRole("button", { name: /^iniciar$/i });
     await userEvent.click(start);
 
     // Presencia de acciones rápidas (cualquier botón de la sección)
     expect(screen.getByRole("button", { name: /adrenalina/i })).toBeInTheDocument();
   });
 });
+
