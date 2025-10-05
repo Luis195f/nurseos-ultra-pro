@@ -137,7 +137,7 @@ export async function ensureDevice(
     recordedOn: new Date().toISOString(),
   });
   return { device, use: dus };
-<<<<<<< HEAD
+
 }
 
 export async function setDeceased(patientId: string, deceasedDateTime: string) {
@@ -211,8 +211,7 @@ export async function registerDeviceUse(patientId: string, deviceCode: string) {
   } catch {
     return { ok: true, offline: true };
   }
-=======
->>>>>>> wip/snapshot-20251005-0909
+
 }
 
 export async function setDeceased(patientId: string, deceasedDateTime: string) {
@@ -260,4 +259,5 @@ export async function savePatientDocument(
 
 // Alias por compatibilidad con imports antiguos
 export { hasFHIR as hasFhir };
+
 
