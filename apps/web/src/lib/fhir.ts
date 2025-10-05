@@ -137,6 +137,7 @@ export async function ensureDevice(
     recordedOn: new Date().toISOString(),
   });
   return { device, use: dus };
+<<<<<<< HEAD
 }
 
 export async function setDeceased(patientId: string, deceasedDateTime: string) {
@@ -210,4 +211,53 @@ export async function registerDeviceUse(patientId: string, deviceCode: string) {
   } catch {
     return { ok: true, offline: true };
   }
+=======
+>>>>>>> wip/snapshot-20251005-0909
 }
+
+export async function setDeceased(patientId: string, deceasedDateTime: string) {
+  return Fhir.patch<Any>("Patient", patientId, [
+    { op: "add", path: "/deceasedDateTime", value: deceasedDateTime },
+  ]);
+}
+
+export async function postObservation(obs: Any) {
+  return Fhir.create<Any>("Observation", obs);
+}
+
+export async function savePatientDocument(
+  patientId: string,
+  kind: "evolution" | "handover" | "note" | string,
+  title: string,
+  text: string
+) {
+  const compId = `comp-${patientId}-${Date.now()}`;
+  const comp = {
+    resourceType: "Composition",
+    id: compId,
+    status: "final",
+    type: {
+      coding: [{ system: "http://loinc.org", code: "11506-3", display: "Progress note" }],
+    },
+    subject: { reference: `Patient/${patientId}` },
+    date: new Date().toISOString(),
+    title,
+    section: [{ title: kind, text: { status: "generated", div: `<div>${text}</div>` } }],
+  };
+
+  const doc = {
+    resourceType: "DocumentReference",
+    status: "current",
+    type: { coding: [{ system: "http://loinc.org", code: "11506-3" }] },
+    subject: { reference: `Patient/${patientId}` },
+    date: new Date().toISOString(),
+    content: [{ attachment: { contentType: "text/markdown", data: btoa(text) } }],
+  };
+
+  const bundle = makeBundle([comp, doc]);
+  return Fhir.bundle<Any>(bundle);
+}
+
+// Alias por compatibilidad con imports antiguos
+export { hasFHIR as hasFhir };
+
