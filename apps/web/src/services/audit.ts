@@ -25,3 +25,8 @@ export async function logAudit(evt: {
     console.debug('[audit]', evt);
   }
 }
+
+export function log(event: string, data?: any) {
+  try { console.debug("[audit]", event, data ?? ""); } catch {}
+}
+export default { log };
