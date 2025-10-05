@@ -1,0 +1,48 @@
+name: CI Min
+
+on:
+  push: { branches: [ main, issue-* ] }
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  web-vitest:
+    name: Web – Vitest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          standalone: true        # lee packageManager del package.json raíz
+          run_install: false
+      - run: pnpm -v
+      - run: pnpm -C apps/web install --frozen-lockfile=false
+      - run: pnpm -C apps/web test:run
+
+  api-import:
+    name: API – Import sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: python -m pip install -U pip
+      - run: pip install -r apps/api/requirements.txt
+      - name: Import safe modules
+        run: |
+          python - <<'PY'
+          import importlib, sys
+          sys.path.insert(0, ".")
+          for m in ["apps","apps.api","apps.api.app","apps.api.app.models","apps.api.app.schemas"]:
+              importlib.import_module(m)
+          print("import-ok")
+          PY
+
+
+
+
+

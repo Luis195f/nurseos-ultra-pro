@@ -1,7 +1,9 @@
-// src/pages/Handover.tsx
+// apps/web/src/pages/Handover.tsx
 import { useEffect, useMemo, useState } from "react";
 import { listPatients, listDevices, savePatientDocument } from "../services/fhirClient";
 import MultiAgentAssist from "../components/MultiAgentAssist";
+import { FeatureGate, flags } from "../services/featureFlags";
+import MicButton from "../components/voice/MicButton";
 
 type Turno = "dia" | "noche";
 const unitList = ["Urgencias","UCI","Medicina Interna","Quirófano","Traumatología","Oncología","Pediatría","Neonatos","Cardiología","Neurología"];
@@ -17,6 +19,7 @@ function defaultWindow(turno: Turno) {
 }
 
 export default function Handover(){
+  // === Tu estado original ===
   const [patients, setPatients] = useState<any[]>([]);
   const [patientId, setPatientId] = useState<string>("");
   const [devices, setDevices] = useState<string[]>([]);
@@ -28,6 +31,7 @@ export default function Handover(){
   const [plan, setPlan] = useState("");
   const [pendientes, setPendientes] = useState("");
 
+  // === Datos (igual que lo tuyo) ===
   useEffect(() => { (async()=>{
     const { patients } = await listPatients();
     setPatients(patients);
@@ -40,6 +44,24 @@ export default function Handover(){
 
   const selected = useMemo(()=>patients.find(p=>p.id===patientId), [patients, patientId]);
   const fullName = (p:any) => ((p?.name?.[0]?.given?.join(" ") || "") + " " + (p?.name?.[0]?.family || "")).trim();
+
+  // === Macros 1-click (no invasivas) ===
+  type Target = "evolucion" | "meds" | "plan" | "pendientes";
+  const macros: Array<{label:string; target:Target; text:string}> = [
+    { label:"Sin cambios relevantes", target:"evolucion", text:"Sin cambios relevantes en el turno." },
+    { label:"Dolor controlado",       target:"evolucion", text:"Dolor controlado con analgesia pautada." },
+    { label:"Vía periférica ok",      target:"plan",      text:"Vía periférica permeable, fijación íntegra." },
+    { label:"Herida limpia/seca",     target:"plan",      text:"Herida quirúrgica limpia y seca, sin signos de infección." },
+    { label:"Tareas pendientes",      target:"pendientes",text:"Revisar herida a las 20:00; controlar balance hídrico cada 4 h." },
+  ];
+
+  function appendTo(target:Target, text:string){
+    if (!text?.trim()) return;
+    if (target === "evolucion") setEvolucion(v => (v ? v+"\n" : "") + text);
+    if (target === "meds")      setMeds(v => (v ? v+"\n" : "") + text);
+    if (target === "plan")      setPlan(v => (v ? v+"\n" : "") + text);
+    if (target === "pendientes")setPendientes(v => (v ? v+"\n" : "") + text);
+  }
 
   async function onSave() {
     if (!patientId) { alert("Selecciona paciente"); return; }
@@ -103,22 +125,58 @@ Ventana: ${start} → ${end}
           </div>
         )}
 
+        {/* === Evolución === */}
         <label className="card" style={{ display:"grid", gap:6 }}>
           <span className="muted">Evolución / hechos relevantes</span>
           <textarea rows={4} value={evolucion} onChange={(e)=>setEvolucion(e.target.value)} />
+          <FeatureGate when={flags.VOICE_NOTES}>
+            <div style={{ marginTop:6 }}>
+              <MicButton onDone={(t)=>appendTo("evolucion", t)} />
+            </div>
+          </FeatureGate>
         </label>
+
+        {/* === Medicación === */}
         <label className="card" style={{ display:"grid", gap:6 }}>
           <span className="muted">Cambios de medicación</span>
           <textarea rows={3} value={meds} onChange={(e)=>setMeds(e.target.value)} />
+          <FeatureGate when={flags.VOICE_NOTES}>
+            <div style={{ marginTop:6 }}>
+              <MicButton onDone={(t)=>appendTo("meds", t)} />
+            </div>
+          </FeatureGate>
         </label>
+
+        {/* === Plan === */}
         <label className="card" style={{ display:"grid", gap:6 }}>
           <span className="muted">Plan / objetivos</span>
           <textarea rows={3} value={plan} onChange={(e)=>setPlan(e.target.value)} />
+          <FeatureGate when={flags.VOICE_NOTES}>
+            <div style={{ marginTop:6 }}>
+              <MicButton onDone={(t)=>appendTo("plan", t)} />
+            </div>
+          </FeatureGate>
         </label>
+
+        {/* === Pendientes === */}
         <label className="card" style={{ display:"grid", gap:6 }}>
           <span className="muted">Pendientes para el siguiente turno</span>
           <textarea rows={3} value={pendientes} onChange={(e)=>setPendientes(e.target.value)} />
+          <FeatureGate when={flags.VOICE_NOTES}>
+            <div style={{ marginTop:6 }}>
+              <MicButton onDone={(t)=>appendTo("pendientes", t)} />
+            </div>
+          </FeatureGate>
         </label>
+
+        {/* Macros 1-click (no invasivas) */}
+        <div className="card" style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+          {macros.map((m, i) => (
+            <button key={i} type="button" className="button" onClick={()=>appendTo(m.target, m.text)}>
+              {m.label}
+            </button>
+          ))}
+        </div>
 
         <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
           <button className="button" onClick={onSave}>Guardar entrega en historial</button>
@@ -137,3 +195,4 @@ Ventana: ${start} → ${end}
     </div>
   );
 }
+

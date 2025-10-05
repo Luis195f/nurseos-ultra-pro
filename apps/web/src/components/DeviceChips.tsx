@@ -83,3 +83,5 @@ export default function DeviceChips({ selected, onToggle }: Props) {
 }
 
 
+/** Compat export para Registry */
+export { OPTIONS as DEVICE_CATALOG };
