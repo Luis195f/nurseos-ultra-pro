@@ -60,3 +60,4 @@ jobs:
           if [ -d services/tests/fhir-examples ]; then \
             java -jar validator_cli.jar services/tests/fhir-examples/*.json -version 4.0; \
           else echo "No hay ejemplos FHIR para validar"; fi
+
