@@ -1,8 +1,7 @@
 name: Deploy Pages
 
 on:
-  push:
-    branches: [ main ]
+  push: { branches: [ main ] }
   workflow_dispatch:
 
 permissions:
@@ -19,17 +18,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
+      - uses: pnpm/action-setup@v4     # ← sin 'version'
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
-      - run: corepack enable
-      - run: pnpm install
+      - run: pnpm install              # quité --frozen-lockfile para evitar pinchos
       - run: pnpm -C apps/web build
-      # SPA fallback para rutas cliente
       - run: cp apps/web/dist/index.html apps/web/dist/404.html
       - uses: actions/upload-pages-artifact@v3
         with:
