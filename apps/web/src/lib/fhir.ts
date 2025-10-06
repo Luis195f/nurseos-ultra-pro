@@ -182,42 +182,53 @@ export async function savePatientDocument(
   const bundle = makeBundle([comp, doc]);
   return Fhir.bundle<Any>(bundle);
 }
+// === Opcional FHIR para Código Azul y Fallecidos ===
 
-// Alias por compatibilidad con imports antiguos
-export { hasFHIR as hasFhir };
-
-
-/** Compat: registrar uso de dispositivo (fallback simple vía fetch).
- * No rompe offline: si no hay BASE, devuelve ok=true, offline.
- */
-export async function registerDeviceUse(patientId: string, deviceCode: string) {
-  try {
-    const BASE = (import.meta as any).env?.VITE_FHIR_BASE_URL?.trim?.() || "";
-    if (!BASE) return { ok: true, offline: true };
-
-    const body = {
-      resourceType: "DeviceUseStatement",
-      subject: { reference: `Patient/${patientId}` },
-      device: {
-        concept: { coding: [{ system: "http://snomed.info/sct", code: deviceCode }] }
-      }
-    };
-    const res = await fetch(`${BASE}/DeviceUseStatement`, {
-      method: "POST",
-      headers: { "content-type": "application/fhir+json" },
-      body: JSON.stringify(body)
-    });
-    return { ok: res.ok, status: res.status };
-  } catch {
-    return { ok: true, offline: true };
-  }
-
+// Observation simple para "Code Blue"
+export async function registerCodeBlue(patientId: string, note?: string) {
+  if (!hasFHIR() || !patientId) return null;
+  await ensurePatient(patientId);
+  return fhirPost("Observation", {
+    resourceType: "Observation",
+    status: "final",
+    code: { text: "Code Blue" },
+    subject: { reference: `Patient/${patientId}` },
+    effectiveDateTime: new Date().toISOString(),
+    note: note ? [{ text: note }] : undefined,
+  });
 }
 
+// JSON Patch mínimo a Patient (no pisa otros campos)
+async function patchPatient(patientId: string, ops: any[]) {
+  const res = await fetch(`${BASE}/Patient/${encodeURIComponent(patientId)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json-patch+json" },
+    body: JSON.stringify(ops),
+  });
+  if (!res.ok) throw new Error(`FHIR Patient PATCH ${res.status}`);
+  return res.json();
+}
 
-
-
-// Alias por compatibilidad con imports antiguos
-
-
-
+// Marca paciente fallecido y registra observación opcional de causa
+export async function markDeceased(
+  patientId: string,
+  dateTimeISO: string,
+  cause?: string
+) {
+  if (!hasFHIR() || !patientId) return null;
+  await ensurePatient(patientId);
+  await patchPatient(patientId, [
+    { op: "add", path: "/deceasedDateTime", value: dateTimeISO },
+  ]);
+  if (cause) {
+    await fhirPost("Observation", {
+      resourceType: "Observation",
+      status: "final",
+      code: { text: "Cause of death" },
+      subject: { reference: `Patient/${patientId}` },
+      effectiveDateTime: dateTimeISO,
+      note: [{ text: cause }],
+    });
+  }
+  return true;
+}

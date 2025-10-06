@@ -1,23 +1,18 @@
-from fastapi import FastAPI, Depends, Query, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+import os
+import asyncio
+from typing import List, Optional
+from fastapi import FastAPI, Depends, Query
 from sqlalchemy.orm import Session
-from typing import List, Optional, Any, Dict
 from .db import Base, engine, SessionLocal
 from .models import EventLog
 from .schemas import EventOut
+from .fhir_outbox_router import router as fhir_outbox_router
+from .fhir_outbox_worker import worker_loop
 
-app = FastAPI(title="NurseOS API (Events/Handover)")
+app = FastAPI(title="NurseOS API (Events + Outbox)")
+
+# Crea tablas si no existen (dev)
 Base.metadata.create_all(bind=engine)
-
-# CORS básico (ajusta orígenes para tu dominio)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # ← cámbialo si necesitas restringir
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 def get_db():
     db = SessionLocal()
@@ -39,39 +34,16 @@ def list_events(
     db: Session = Depends(get_db),
 ):
     q = db.query(EventLog).order_by(EventLog.ts.desc()).limit(limit)
-    if status:
-        q = q.filter(EventLog.status == status)
-    if category:
-        q = q.filter(EventLog.category == category)
-    if resource_type:
-        q = q.filter(EventLog.resource_type == resource_type)
+    if status: q = q.filter(EventLog.status == status)
+    if category: q = q.filter(EventLog.category == category)
+    if resource_type: q = q.filter(EventLog.resource_type == resource_type)
     return q.all()
 
-# --- Auditoría simple desde el frontend (opcional) ---
-class AuditIn(BaseModel):
-    action: str
-    status: str = "ok"
-    category: str = "handover"
-    resource_type: str = "DocumentReference"
-    resource_id: Optional[str] = None
-    data: Optional[Dict[str, Any]] = None
+# Rutas de Outbox
+app.include_router(fhir_outbox_router)
 
-@app.post("/api/audit")
-def create_audit(ev: AuditIn, db: Session = Depends(get_db)):
-    try:
-        obj = EventLog(
-            status=ev.status,
-            category=ev.category,
-            resource_type=ev.resource_type,
-            resource_id=ev.resource_id,
-            action=ev.action,
-            data=ev.data,  # si tu modelo es JSONB/JSON; si no, cambia a str(ev.data)
-        )
-        db.add(obj)
-        db.commit()
-        db.refresh(obj)
-        return {"ok": True, "id": getattr(obj, "id", None)}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=f"audit insert failed: {e}")
-
+# Lanza worker (se puede desactivar con OUTBOX_WORKER=0)
+if os.getenv("OUTBOX_WORKER", "1") != "0":
+    @app.on_event("startup")
+    async def _start_worker():
+        asyncio.create_task(worker_loop())

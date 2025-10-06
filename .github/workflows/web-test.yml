@@ -1,11 +1,9 @@
 name: Web Tests
 
 on:
-<<<<<<< HEAD
   push: { branches: [ main, issue-* ] }
   pull_request:
   workflow_dispatch:
-=======
   push:
     paths:
       - "apps/web/**"
@@ -14,14 +12,13 @@ on:
     paths:
       - "apps/web/**"
       - ".github/workflows/web-test.yml"
->>>>>>> fdfd9c9 (test(frontend): vitest setup + storage/store utils + web-test workflow)
+main
 
 jobs:
   vitest:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-<<<<<<< HEAD
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -38,7 +35,6 @@ jobs:
 
 
 
-=======
       - uses: pnpm/action-setup@v3
         with:
           version: 9
@@ -47,5 +43,5 @@ jobs:
           node-version: 20
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm -C apps/web test:run
->>>>>>> fdfd9c9 (test(frontend): vitest setup + storage/store utils + web-test workflow)
+      - run: pnpm -C apps/web test:run 
+      main
