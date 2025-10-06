@@ -1,0 +1,4 @@
+[
+  {"id":"1","name":"Paciente 1","news2":0,"falls":false},
+  {"id":"2","name":"Paciente 2","news2":3,"falls":true}
+]

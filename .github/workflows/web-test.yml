@@ -1,6 +1,9 @@
 name: Web Tests
 
 on:
+  push: { branches: [ main, issue-* ] }
+  pull_request:
+  workflow_dispatch:
   push:
     paths:
       - "apps/web/**"
@@ -9,12 +12,29 @@ on:
     paths:
       - "apps/web/**"
       - ".github/workflows/web-test.yml"
+main
 
 jobs:
   vitest:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          standalone: true        # lee packageManager del package.json raíz
+          run_install: false
+      - run: pnpm -v
+      - run: pnpm -C apps/web install --frozen-lockfile=false
+      - run: pnpm -C apps/web test:run
+
+
+
+
+
       - uses: pnpm/action-setup@v3
         with:
           version: 9
@@ -23,4 +43,5 @@ jobs:
           node-version: 20
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm -C apps/web test:run
+      - run: pnpm -C apps/web test:run 
+      main

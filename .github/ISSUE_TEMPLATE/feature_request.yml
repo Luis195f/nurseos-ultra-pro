@@ -1,0 +1,12 @@
+name: "✨ Feature"
+description: Solicita una mejora o nueva funcionalidad
+labels: ["type:feature", "needs/spec"]
+title: "feat: <resumen>"
+body:
+  - type: textarea
+    id: valor
+    attributes: { label: Valor para el usuario, description: "¿Qué problema resuelve y para quién?" }
+    validations: { required: true }
+  - type: textarea
+    id: criterios
+    attributes: { label: Criterios de aceptación, placeholder: "- Dado/Cuando/Entonces …" }
