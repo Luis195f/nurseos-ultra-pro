@@ -1,19 +1,15 @@
 services:
   web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-    ports:
-      - "5173:80"
-    depends_on: [agents]
+    build: ./apps/web
+    environment:
+      - VITE_FHIR_BASE=http://reverse/fhir
+    ports: ["5173:5173"]
+    depends_on: [agents, reverse]
   agents:
-    build:
-      context: .
-      dockerfile: services/agents-service/Dockerfile
+    build: ./services/agents-service
     environment:
       - OPA_URL=http://opa:8181/v1/data/fhir/authz/allow
-    ports:
-      - "8070:8070"
+    ports: ["8070:8070"]
   opa:
     image: openpolicyagent/opa:latest
     command: ["run","--server","/policies"]
@@ -28,16 +24,18 @@ services:
     volumes:
       - "./infra/traefik/traefik.yml:/etc/traefik/traefik.yml:ro"
     ports: ["8088:80","8089:8080"]
-  # Opcionales
+  # Opcional Auth
   keycloak:
     image: quay.io/keycloak/keycloak:25.0
     command: ["start-dev","--http-port","8081"]
     ports: ["8081:8081"]
     profiles: ["auth"]
+  # Opcional FHIR
   hapi:
     image: hapiproject/hapi:v7.4.0
     ports: ["8080:8080"]
     profiles: ["fhir"]
+  # Observabilidad (mínimo)
   otel:
     image: otel/opentelemetry-collector:0.99.0
     command: ["--config=/etc/otel/config.yaml"]

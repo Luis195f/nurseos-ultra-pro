@@ -38,10 +38,10 @@
     "e2e:report": "playwright show-report",
     "dev": "vite",
     "test:ui": "vitest --ui",
-    "test": "vitest",
+    "test:run": "vitest run",
     "build": "vite build",
     "preview": "vite preview",
     "e2e:ui": "playwright test --ui",
-    "test:run": "vitest run"
+    "test": "vitest"
   }
 }
