@@ -1,33 +1,44 @@
-/* store.ts – compat util para localStorage + memoria */
-type Json = any;
-const isBrowser = typeof window !== "undefined";
-const mem = new Map<string,string>();
-
-export function getItem(k:string){ try{ return isBrowser? window.localStorage.getItem(k): (mem.get(k)??null);}catch{ return mem.get(k)??null; } }
-export function setItem(k:string,v:string){ try{ if(isBrowser){ window.localStorage.setItem(k,v); return;} }catch{} mem.set(k,v); }
-export function removeItem(k:string){ try{ if(isBrowser){ window.localStorage.removeItem(k); return;} }catch{} mem.delete(k); }
-
-export function load<T=Json>(k:string, fb?:T):T{
-  const raw=getItem(k); if(raw==null) return fb as T;
-  try{ return JSON.parse(raw) as T; } catch { return (raw as unknown) as T; }
-}
-export function save<T=Json>(k:string, v:T){
-  const raw=typeof v==="string"? v: JSON.stringify(v);
-  setItem(k,raw);
-}
-export function update<T=Json>(k:string, m:(p:T|undefined)=>T){
-  const p=load<T|undefined>(k,undefined); const n=m(p); save(k,n); return n;
-}
-
-/** Claves usadas en pantallas (alias de compat) */
-export const key = {
-  handover: "handover:last",
-  devices: "registry:devices",
-  registryOpts: "registry:opts",
-  deceased: "deceased:last",
+// apps/web/src/lib/store.ts
+export const STORE_KEYS = {
+  PATIENT_REGISTRY: "patient-registry",
+  CODE_BLUE: "code-blue",
+  DECEASED: "deceased"
 } as const;
 
-/** Alias para imports antiguos */
-export const STORE_KEYS = key;
 
-export default { load, save, update, getItem, setItem, removeItem, key, STORE_KEYS };
+export type StoreKey = (typeof STORE_KEYS)[keyof typeof STORE_KEYS];
+
+export function loadLS<T>(key: StoreKey, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export function saveLS<T>(key: StoreKey, value: T) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* no-op */
+  }
+}
+
+export function appendLS<T>(key: StoreKey, item: T) {
+  const current = loadLS<T[]>(key, []);
+  current.push(item);
+  saveLS(key, current);
+}
+
+export function updateAtLS<T>(
+  key: StoreKey,
+  predicate: (x: T) => boolean,
+  updater: (x: T) => T
+) {
+  const current = loadLS<T[]>(key, []);
+  const next = current.map((x) => (predicate(x) ? updater(x) : x));
+  saveLS(key, next);
+}
+
+
