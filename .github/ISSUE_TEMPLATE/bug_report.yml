@@ -1,0 +1,22 @@
+name: "🐛 Bug"
+description: Reporta un fallo
+labels: ["type:bug", "triage"]
+title: "bug: <resumen>"
+body:
+  - type: textarea
+    id: desc
+    attributes:
+      label: Descripción
+      description: "¿Qué pasó vs. qué esperabas?"
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducir
+      placeholder: "1) … 2) … 3) …"
+  - type: input
+    id: version
+    attributes: { label: Versión/commit, placeholder: "ej. v0.3.2 o abc1234" }
+  - type: textarea
+    id: logs
+    attributes: { label: Logs/console, render: shell }
