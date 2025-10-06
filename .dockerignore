@@ -1,0 +1,12 @@
+.git
+node_modules
+dist
+build
+**/.next
+**/.turbo
+**/.cache
+**/coverage
+**/__pycache__
+**/*.db
+**/*.sqlite
+*.zip
