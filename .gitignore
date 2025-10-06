@@ -28,3 +28,11 @@ Thumbs.db
 # Artifacts
 *.zip
 *.tar.gz
+
+nurseos.db
+*.db
+<<<<<<< HEAD
+=======
+
+nurseos.db
+>>>>>>> origin/main

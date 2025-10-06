@@ -1,91 +1,80 @@
-// apps/web/src/components/DeviceChips.tsx
-import React from "react";
-import { ensurePatient, registerDeviceUse, hasFHIR } from "../lib/fhir";
-
-export type DeviceItem = { code: string; text: string };
-
-export const DEVICE_CATALOG: DeviceItem[] = [
-  { code: "PIV", text: "PIV (Vía periférica)" },
-  { code: "CVC", text: "CVC (Vía central)" },
-  { code: "NGT", text: "Sonda nasogástrica" },
-  { code: "VENT", text: "Ventilación invasiva" },
-  { code: "O2", text: "Cánula de O₂" },
-  { code: "FOLEY", text: "Sonda vesical Foley" },
-  { code: "PICC", text: "PICC" },
-  { code: "TRACH", text: "Traqueostomía" },
-];
-
-const key = (pid: string) => `nurseos:devices:${pid}`;
-const load = (pid: string) => {
-  try {
-    return JSON.parse(localStorage.getItem(key(pid)) ?? "[]");
-  } catch {
-    return [];
-  }
-};
-const save = (pid: string, arr: string[]) =>
-  localStorage.setItem(key(pid), JSON.stringify(arr));
+import { useEffect, useState } from "react";
+import { key, load, save } from "../lib/store";
+import { ensurePatient, hasFHIR, registerDeviceUse } from "../lib/fhir";
 
 type Props = {
-  /** Si lo pasas, se persiste por paciente y si hay FHIR se registra DeviceUse */
-  patientId?: string;
-  /** Modo controlado */
-  selected?: string[];
-  /** Modo no controlado */
-  defaultSelected?: string[];
-  onChange?: (codes: string[]) => void;
+  selected: string[];
+  onToggle: (code: string) => void;
 };
 
-export default function DeviceChips({
-  patientId,
-  selected,
-  defaultSelected,
-  onChange,
-}: Props) {
-  const [codes, setCodes] = React.useState<string[]>(
-    selected ?? defaultSelected ?? (patientId ? load(patientId) : [])
-  );
+const OPTIONS = [
+  "Oxígeno",
+  "Monitor",
+  "Bomba infusión",
+  "SNG",
+  "Sonda vesical",
+  "Catéter central",
+  "CPAP/BiPAP",
+  "Marcapasos transitorio",
+];
 
-  // Si el padre lo controla, refleja cambios
-  React.useEffect(() => {
-    if (selected) setCodes(selected);
-  }, [selected]);
+export default function DeviceChips({ selected, onToggle }: Props) {
+  const [items, setItems] = useState<string[]>(selected ?? []);
+  const [pid, setPid] = useState<string>("");
+
+  // carga/guarda selección simple en localStorage y asegura paciente (stub)
+  useEffect(() => {
+    const s = load<string[]>("device_chips") ?? [];
+    if (s.length) setItems(s);
+  }, []);
+
+  useEffect(() => {
+    save("device_chips", items);
+  }, [items]);
 
   async function toggle(code: string) {
-    const next = codes.includes(code)
-      ? codes.filter((c) => c !== code)
-      : [...codes, code];
+    const next = items.includes(code)
+      ? items.filter((c) => c !== code)
+      : [...items, code];
 
-    setCodes(next);
-    onChange?.(next);
-    if (patientId) save(patientId, next);
+    setItems(next);
+    onToggle?.(code);
 
-    // Si se ACTIVÓ el chip y hay FHIR, registra el DeviceUse
-    if (hasFHIR && patientId && !codes.includes(code)) {
-      try {
-        await ensurePatient(patientId);
-        const item = DEVICE_CATALOG.find((d) => d.code === code);
-        await registerDeviceUse(patientId, { code, text: item?.text });
-      } catch (e) {
-        console.error("Error FHIR (DeviceUse):", e);
+    // “Registro rápido” en FHIR si está configurado (no rompe si no hay FHIR)
+    try {
+      if (hasFHIR() && pid) {
+        await ensurePatient(pid);
+        await registerDeviceUse(pid, code);
       }
+    } catch {
+      // silencioso: no bloquea la UI
     }
   }
 
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-      {DEVICE_CATALOG.map((d) => {
-        const active = codes.includes(d.code);
+    <div className="flex items-start gap-2 flex-wrap">
+      <input
+        placeholder="Paciente ID"
+        className="border rounded px-2 py-1"
+        value={pid}
+        onChange={(e) => setPid(e.target.value.trim())}
+      />
+      {OPTIONS.map((opt) => {
+        const active = items.includes(opt);
         return (
           <button
-            key={d.code}
+            key={opt}
             type="button"
-            onClick={() => toggle(d.code)}
-            className={`px-3 py-1 rounded-full border ${
-              active ? "bg-emerald-100 border-emerald-300" : "bg-white border-gray-300"
-            }`}
+            aria-pressed={active}
+            onClick={() => toggle(opt)}
+            className={
+              "px-3 py-1 rounded-full border text-sm " +
+              (active
+                ? "bg-red-700 text-white border-red-700"
+                : "bg-white text-gray-800 border-gray-300 hover:border-gray-500")
+            }
           >
-            {d.text}
+            {opt}
           </button>
         );
       })}
@@ -93,3 +82,6 @@ export default function DeviceChips({
   );
 }
 
+
+/** Compat export para Registry */
+export { OPTIONS as DEVICE_CATALOG };

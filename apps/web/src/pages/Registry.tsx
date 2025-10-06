@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import DeviceChips, { DEVICE_CATALOG } from "../components/DeviceChips";
+import DeviceChips from "../components/DeviceChips";
 
 const AGENTS = (import.meta as any).env.VITE_AGENTS_API_BASE || "";
 const FHIR   = (import.meta as any).env.VITE_FHIR_BASE_URL   || "";
@@ -257,3 +257,4 @@ export default function Registry(){
     </section>
   );
 }
+
