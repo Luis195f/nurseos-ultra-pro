@@ -2,8 +2,12 @@ name: CI
 on:
   push: { branches: [ main ] }
   pull_request: { branches: [ main ] }
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   web:
+    name: Web – Build & Unit & E2E
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -11,27 +15,48 @@ jobs:
         with: { version: 9 }
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm -C apps/web build
-      - run: pnpm -C apps/web test -- --run --coverage --reporter=dot
-      - run: pnpm -C apps/web exec playwright install --with-deps
-      - run: pnpm -C apps/web e2e -- --reporter=dot
-  api-lint:
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm -C apps/web build
+      - name: Unit tests (vitest)
+        run: pnpm -C apps/web test -- --run --reporter=dot --silent
+      - name: Install Playwright
+        run: pnpm -C apps/web exec playwright install --with-deps
+      - name: E2E
+        run: pnpm -C apps/web e2e -- --reporter=dot
+  api:
+    name: API – Import (smoke)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
-      - run: pip install ruff black
-      - run: ruff --version && black --version
-  fhir-validate:
+      - name: Install deps
+        if: ${{ hashFiles("apps/api/requirements.txt") != "" }}
+        run: pip install -r apps/api/requirements.txt
+      - name: Import modules
+        run: |
+          python - <<'PY'
+          import importlib, sys
+          sys.path.insert(0, '.')
+          for m in ['apps','apps.api','apps.api.app']:
+            importlib.import_module(m)
+          print('import-ok')
+          PY
+  fhir:
+    name: FHIR Validator (examples)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: "21" }
-      - run: curl -L -o validator_cli.jar https://github.com/hapifhir/org.hl7.fhir.core/releases/latest/download/validator_cli.jar
-      - run: |
+      - name: Download HL7 FHIR Validator
+        run: |
+          curl -L -o validator_cli.jar \
+            https://github.com/hapifhir/org.hl7.fhir.core/releases/latest/download/validator_cli.jar
+      - name: Validate examples (if any)
+        run: |
           if [ -d services/tests/fhir-examples ]; then \
             java -jar validator_cli.jar services/tests/fhir-examples/*.json -version 4.0; \
-          else echo "No hay ejemplos FHIR"; fi
+          else echo "No hay ejemplos FHIR para validar"; fi
