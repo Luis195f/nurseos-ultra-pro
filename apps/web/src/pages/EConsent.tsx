@@ -1,22 +1,16 @@
-import React, { useState } from 'react'
-import SignaturePad from '../components/SignaturePad'
-import { authFetch } from '../services/authService'
-
+import { FLAGS } from "../config/flags";
+import { buildEConsentBundle } from "../fhir/builders";
 export default function EConsent(){
-  const [sig, setSig] = useState<string>('')
-  const [status,setStatus] = useState<string>('')
-  async function submit(){
-    const payload = { patientId: 'pat-001', procedure: 'Transfusión', signature: sig }
-    const res = await authFetch('/api/consent', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
-    setStatus(await res.text())
+  if(!FLAGS.eConsent) return null;
+  let txt = "";
+  async function save(ev:any){
+    ev.preventDefault();
+    const b = buildEConsentBundle({ patientRef:"Patient/1", consentText: txt, byUser:"Practitioner/1" });
+    console.log("Consent Bundle", b);
+    alert("E-Consent draft creado (consola).");
   }
-  return (
-    <div className="card">
-      <h2>E-Consentimiento</h2>
-      <p>Firma aquí para confirmar su consentimiento informado.</p>
-      <SignaturePad onChange={setSig}/>
-      <button className="button" onClick={submit} disabled={!sig}>Firmar</button>
-      <div style={{marginTop:12}}>{status}</div>
-    </div>
-  )
+  return (<form onSubmit={save}>
+    <textarea onChange={(e:any)=>txt=e.target.value} placeholder="Texto de consentimiento..." />
+    <button>Guardar borrador</button>
+  </form>);
 }
