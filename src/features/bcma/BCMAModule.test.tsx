@@ -1,0 +1,1 @@
+<content_of_BCMAModule.test.tsx>
